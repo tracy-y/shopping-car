@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useDeferredValue, useEffect, useState, useTransition } from "react";
 import Header from "./components/Header";
 import Main from "./components/Main";
 import Basket from "./components/Basket";
@@ -14,9 +14,11 @@ function App() {
         x.id === product.id ? { ...exist, qty: exist.qty + 1 } : x
       );
       setCartItems(newCartItems);
+      localStorage.setItem("cartItems", JSON.stringify(newCartItems));
     } else {
       const newCartItems = [...cartItems, { ...product, qty: 1 }];
       setCartItems(newCartItems);
+      localStorage.setItem("cartItems", JSON.stringify(newCartItems));
     }
   };
   const onRemove = (product) => {
@@ -25,16 +27,35 @@ function App() {
       const newCartItems = cartItems.filter((x) => x.id !== product.id);
       console.log(exist.qty);
       setCartItems(newCartItems);
+      localStorage.setItem("cartItems", JSON.stringify(newCartItems));
     } else {
       const newCartItems = cartItems.map((x) =>
         x.id === product.id ? { ...exist, qty: exist.qty - 1 } : x
       );
       setCartItems(newCartItems);
+      localStorage.setItem("cartItems", JSON.stringify(newCartItems));
     }
   };
-  return (
+
+  const [isPending, startTranstion] = useTransition();
+
+  useEffect(() => {
+    startTranstion(() => {
+      setCartItems(
+        localStorage.getItem("cartItems")
+          ? JSON.parse(localStorage.getItem("cartItems"))
+          : []
+      );
+    });
+  }, []);
+
+  const cartItemsCount = useDeferredValue(cartItems.length);
+
+  return isPending ? (
+    <div>Loading</div>
+  ) : (
     <div>
-      <Header countCartItems={cartItems.length} />
+      <Header countCartItems={cartItemsCount} />
       <div className="row">
         <Main
           products={products}
@@ -42,7 +63,7 @@ function App() {
           onRemove={onRemove}
           cartItems={cartItems}
         />
-        <Basket />
+        <Basket onAdd={onAdd} onRemove={onRemove} cartItems={cartItems} />
       </div>
     </div>
   );
